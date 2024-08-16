@@ -1,0 +1,172 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Sub RunOnAllSheets()\
+    Dim ws As Worksheet\
+\
+    For Each ws In ThisWorkbook.Sheets\
+        Select Case ws.Name\
+            Case "A", "B", "C", "D", "E", "F"\
+                ' Call the subroutines for each sheet\
+                Call ChangeHeader(ws)\
+                Call CalculateQuarterlyChange(ws)\
+                Call colorcellgreenredorwhite(ws)\
+                Call CalculateTotalStockVolume(ws)\
+                Call greates_increase_decreas_total_volumne(ws)\
+        End Select\
+    Next ws\
+    MsgBox "All operations executed on sheets A to F"\
+End Sub\
+\
+Sub ChangeHeader(ws As Worksheet)\
+    With ws\
+        'Rewrite headers\
+        .Range("I1").Value = "Ticker"\
+        .Range("J1").Value = "Quarterly Change"\
+        .Range("K1").Value = "Percent Change"\
+        .Range("L1").Value = "Total Stock Volume"\
+        .Range("P1").Value = "Ticker"\
+        .Range("Q1").Value = "Total Stock Volume"\
+        .Range("O2").Value = "Greatest % increase"\
+        .Range("O3").Value = "Greatest % Decrease"\
+        .Range("O4").Value = "Greatest Total Volume"\
+    End With\
+End Sub\
+\
+Sub CalculateQuarterlyChange(ws As Worksheet)\
+    Dim lastRow As Long\
+    Dim i As Long\
+    Dim ticker As String\
+    Dim quarterlyChange As Double\
+    Dim currentTicker As String\
+    Dim outputRow As Long\
+    Dim priceOpen As Double\
+    Dim priceClose As Double\
+\
+    ' Find the last row with data in column A\
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row\
+    \
+    ' Initialize the output row for results\
+    outputRow = 2 ' Start at row 2\
+    \
+    ' Loop through all rows to calculate quarterly changes\
+    For i = 2 To lastRow\
+        ticker = ws.Cells(i, 1).Value\
+        \
+        ' If it's a new ticker, start summing changes\
+        If ticker <> currentTicker Then\
+            ' Save the result for the previous ticker\
+            If i > 2 Then\
+                ws.Cells(outputRow, 9).Value = currentTicker\
+                ws.Cells(outputRow, 10).Value = quarterlyChange\
+                outputRow = outputRow + 1\
+            End If\
+            ' Reset for the new ticker\
+            currentTicker = ticker\
+            quarterlyChange = 0\
+        End If\
+        \
+        ' Calculate the quarterly change (price close - price open)\
+        priceOpen = ws.Cells(i, 3).Value\
+        priceClose = ws.Cells(i, 6).Value\
+        quarterlyChange = quarterlyChange + (priceClose - priceOpen)\
+    Next i\
+End Sub\
+\
+Sub colorcellgreenredorwhite(ws As Worksheet)\
+    Dim cell As Range\
+    Dim lastRow As Long\
+    \
+    ' Establish how to find the last row in column J\
+    lastRow = ws.Cells(ws.Rows.Count, "J").End(xlUp).Row\
+    \
+    ' Loop through each cell in column J from row 1 to lastRow\
+    For Each cell In ws.Range("J2:J" & lastRow)\
+        If cell.Value > 0 Then\
+            cell.Interior.Color = RGB(0, 255, 0) ' Green\
+        ElseIf cell.Value < 0 Then\
+            cell.Interior.Color = RGB(255, 0, 0) ' Red\
+        Else\
+            cell.Interior.Color = RGB(255, 255, 255) ' White\
+        End If\
+    Next cell\
+End Sub\
+\
+Sub CalculateTotalStockVolume(ws As Worksheet)\
+    Dim lastRow As Long\
+    Dim ticker As String\
+    Dim totalVolume As Double\
+    Dim currentRow As Long\
+\
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row\
+    \
+    ' Add a header for the total stock volume column\
+    ws.Cells(1, "L").Value = "Total Stock Volume"\
+    \
+    ' Loop through each row in the worksheet\
+    For currentRow = 2 To lastRow\
+        ' Get the ticker symbol from column A\
+        ticker = ws.Cells(currentRow, "A").Value\
+        \
+        ' Add the volume to the total for the respective ticker symbol\
+        totalVolume = totalVolume + ws.Cells(currentRow, "G").Value\
+        \
+        ' Check if the next row has a different ticker symbol or if it's the last row\
+        If ws.Cells(currentRow + 1, "A").Value <> ticker Or currentRow = lastRow Then\
+            ' Display the total volume for the ticker symbol in column L\
+            ws.Cells(currentRow, "L").Value = totalVolume\
+            \
+            ' Reset the total volume for the next ticker symbol\
+            totalVolume = 0\
+        End If\
+    Next currentRow\
+End Sub\
+\
+Sub greates_increase_decreas_total_volumne(ws As Worksheet)\
+    Dim lastRow As Long\
+    Dim maxVal As Double\
+    Dim minVal As Double\
+    Dim maxTicker As String\
+    Dim minTicker As String\
+    Dim cellValue As Variant\
+    Dim i As Long\
+    \
+    lastRow = ws.Cells(ws.Rows.Count, "K").End(xlUp).Row\
+    \
+    ' Initialize maxVal and minVal with the first value in the column\
+    maxVal = ws.Cells(2, 11).Value\
+    minVal = ws.Cells(2, 11).Value\
+    maxTicker = ws.Cells(2, 1).Value\
+    minTicker = ws.Cells(2, 1).Value\
+    \
+    ' Loop through Column K to find the highest and lowest numbers and corresponding Ticker names\
+    For i = 2 To lastRow\
+        cellValue = ws.Cells(i, 11).Value\
+        If IsNumeric(cellValue) Then\
+            If cellValue > maxVal Then\
+                maxVal = cellValue\
+                maxTicker = ws.Cells(i, 1).Value ' Update the corresponding Ticker for the highest value\
+            End If\
+            If cellValue < minVal Then\
+                minVal = cellValue\
+                minTicker = ws.Cells(i, 1).Value ' Update the corresponding Ticker for the lowest value\
+            End If\
+        End If\
+    Next i\
+    \
+    ' Display the highest number in Cell Q2 and the corresponding Ticker in Cell P2\
+    ws.Range("Q2").NumberFormat = "0.00%"\
+    ws.Range("Q2").Value = maxVal\
+    ws.Range("P2").Value = maxTicker\
+    \
+    ' Display the lowest number in Cell Q3 and the corresponding Ticker in Cell P3\
+    ws.Range("Q3").NumberFormat = "0.00%"\
+    ws.Range("Q3").Value = minVal\
+    ws.Range("P3").Value = minTicker\
+End Sub\
+\
+}
